@@ -1,0 +1,69 @@
+﻿#1. Вивести книги у яких не введена ціна або ціна дорівнює 0
+SELECT * FROM `booktable` WHERE `price_` IS NULL OR `price_` = 0;
+
+#2. Вивести книги у яких введена ціна, але не введений тираж
+SELECT * FROM `booktable` WHERE `price_` IS NOT NULL AND `circulation_` IS NULL;
+
+#3. Вивести книги, про дату видання яких нічого не відомо.
+SELECT * FROM `booktable` WHERE `date_` IS NULL;
+
+#4. Вивести книги, з дня видання яких пройшло не більше року.
+SELECT * FROM `booktable` WHERE (`date_` + INTERVAL 1 YEAR) > NOW();
+
+#5. Вивести список книг-новинок, відсортованих за зростанням ціни
+SELECT * FROM `booktable` WHERE `novelty_` = 'Yes' ORDER BY `price_` ASC;
+#або, якщо ціна не може бути NULL
+SELECT * FROM `booktable` WHERE `novelty_` = 'Yes' AND `price_` IS NOT NULL ORDER BY `price_` ASC;
+
+#6. Вивести список книг з числом сторінок від 300 до 400, відсортованих в зворотному алфавітному порядку назв
+SELECT * FROM `booktable` WHERE `pages_` BETWEEN 300 AND 400 ORDER BY `name_` DESC;
+
+#7. Вивести список книг з ціною від 20 до 40, відсортованих за спаданням дати
+SELECT * FROM `booktable` WHERE `price_` BETWEEN 20 AND 40 ORDER BY `date_` DESC;
+#або, якщо дата не може бути NULL
+SELECT * FROM `booktable` WHERE `price_` BETWEEN 20 AND 40 AND `date_` IS NULL ORDER BY `date_` DESC;
+
+#8. Вивести список книг, відсортованих в алфавітному порядку назв і ціною по спадаючій
+SELECT * FROM `booktable` ORDER BY `name_` ASC,  `price_` DESC;
+#або, якщо ціна не може бути NULL
+SELECT * FROM `booktable` WHERE `price_` IS NOT NULL ORDER BY `name_` ASC,  `price_` DESC;
+
+#9. Вивести книги, у яких ціна однієї сторінки < 10 копійок.
+SELECT *,`price_`/`pages_` `price_per_page`   FROM `booktable`  WHERE  (`price_`/`pages_`) < 10;
+
+#10. Вивести значення наступних колонок: число символів в назві, перші 20 символів назви великими літерами
+SELECT LENGTH(`name_`) as len_name, UPPER(LEFT(`name_`, 20)) AS left_20_name  FROM `booktable`;
+
+#11. Вивести значення наступних колонок: перші 10 і останні 10 символів назви прописними буквами, розділені '...'
+SELECT CONCAT(LOWER(LEFT(`name_`, 10)), '...', LOWER(RIGHT(`name_`, 10))) AS form_name FROM `booktable`;
+
+#12. Вивести значення наступних колонок: назва, дата, день, місяць, рік
+SELECT `name_`,`date_`,DAY(`date_`) AS day, MONTH(`date_`) AS month, YEAR(`date_`) AS year FROM `booktable`;
+
+#13. Вивести значення наступних колонок: назва, дата, дата в форматі 'dd / mm / yyyy'
+SELECT `name_`,`date_`, DATE_FORMAT(`date_`,'%d/%m/%Y') AS form_date FROM `booktable`;
+
+#14. Вивести значення наступних колонок: код, ціна, ціна в грн., ціна в євро, ціна в руб.
+SELECT `code_`, `price_`, (`price_`*36.41) AS uah, (`price_` *0.93) AS eur, (`price_` * 160) AS 'toilet_paper(rub)'  FROM `booktable`;
+
+#15. Вивести значення наступних колонок: код, ціна, ціна в грн. без копійок, ціна без копійок округлена
+SELECT `code_`, `price_`, TRUNCATE(`price_`*36.41, 0) AS uah_without_penny,  ROUND(`price_`*36.41) AS uah_round_penny FROM `booktable`;
+
+#16. Додати інформацію про нову книгу (всі колонки)
+INSERT INTO booktable(num_, code_, novelty_, name_, price_, publisher_, pages_, formar_, date_, circulation_, subject_, category_)
+VALUES
+(100, 1110, 'No', 'Чиста архітектура', 18.95, 'ФАБУЛА', 416, '135х235/20', '2019-07-24',5000, 'Архітектури програмного забезпечення','Інші книги');
+
+#17. Додати інформацію про нову книгу (колонки обов'язкові для введення)
+INSERT INTO booktable(num_, code_, novelty_, name_, publisher_, pages_, formar_, circulation_, subject_, category_)#ці колонки обов'язкові судячи з ЛР1
+VALUES
+(101, 1111, 'No', 'Чистий код', 'ФАБУЛА', 416, '135х235/21', 5100, 'Читабельність коду', 'Інші книги');
+
+#18. Видалити книги, видані до 1990 року
+DELETE FROM `booktable` WHERE YEAR(`date_`) < 1990;
+
+#19. Проставити поточну дату для тих книг, у яких дата видання відсутня
+UPDATE `booktable` SET `date_` = CURDATE() WHERE `date_` IS NULL;
+
+#20. Установити ознаку новинка для книг виданих після 2005 року
+UPDATE `booktable` SET `novelty_` = 'Yes' WHERE `date_` > 2005;
