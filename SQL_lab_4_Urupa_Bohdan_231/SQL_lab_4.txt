@@ -213,10 +213,10 @@ ORDER BY `publisher_`,`subject_`, `category_`;
 #20. Вивести список видавництв, у яких округлена до цілого ціна однієї сторінки більше 10 копійок.
 SELECT 
     `publisher_`, 
-    (SUM(`price_`) / SUM(`pages_`)) AS average_price_per_page
+    ROUND((SUM(`price_`) / SUM(`pages_`)) * 100, 0) AS price_per_page_in_pennies
 FROM `booktable`
 GROUP BY `publisher_`
-HAVING average_price_per_page > 0.1;
+HAVING price_per_page > 10;
 
 
 	
