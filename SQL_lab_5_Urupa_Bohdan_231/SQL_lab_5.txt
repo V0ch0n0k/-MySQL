@@ -1,0 +1,88 @@
+﻿DROP DATABASE IF EXISTS LibraryBD;
+CREATE DATABASE LibraryBD DEFAULT CHARACTER SET utf8;
+
+USE LibraryBD;
+
+CREATE TABLE Publisher(
+    id_publisher INT NOT NULL AUTO_INCREMENT,
+    _name VARCHAR(50) NOT NULL,
+    PRIMARY KEY(id_publisher),
+    INDEX(_name)
+);
+
+CREATE TABLE Subject(
+    id_subject INT NOT NULL AUTO_INCREMENT,
+    _name VARCHAR(255) NOT NULL,
+    PRIMARY KEY(id_subject),
+    INDEX(_name)
+);
+
+CREATE TABLE Category(
+    id_category INT NOT NULL AUTO_INCREMENT,
+    _name VARCHAR(50) NOT NULL,
+    PRIMARY KEY(id_category),
+    INDEX(_name)
+);
+
+CREATE TABLE Book(
+    id_book INT NOT NULL AUTO_INCREMENT,
+    _code INT UNSIGNED NOT NULL,
+    _novelty VARCHAR(3) NOT NULL CHECK (_novelty = 'Yes' OR _novelty = 'No'),
+    _name VARCHAR(100) NOT NULL,
+    _price DECIMAL(8,2) UNSIGNED NULL,
+    id_publisher INT,
+    _pages INT UNSIGNED NOT NULL,
+    _format VARCHAR(15) CHECK (_format REGEXP '^([0-9]+х[0-9]+[/\\\\][0-9]+)?$'),
+    _date DATE NULL,
+    _circulation INT UNSIGNED NOT NULL DEFAULT 5000,
+    id_subject INT,
+    id_category INT,
+    
+    PRIMARY KEY(id_book),
+    
+    CONSTRAINT FOREIGN KEY (id_publisher) REFERENCES Publisher(id_publisher)
+    	ON DELETE CASCADE ON UPDATE CASCADE,
+    
+    CONSTRAINT FOREIGN KEY (id_subject) REFERENCES Subject(id_subject)
+    	ON DELETE CASCADE ON UPDATE CASCADE,
+    
+    CONSTRAINT FOREIGN KEY (id_category) REFERENCES Category(id_category)
+    	ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+INSERT INTO Publisher(_name)
+VALUES ('Видавнича група BHV'), ('Вільямс'), ('МикроАрт'), ('DiaSoft'), ('ДМК'), ('Триумф'), ('Эком'), ('Києво-Могилянська академія'), ('Університет "Україна"'), ('Вінниця: ВДТУ');
+
+INSERT INTO Subject(_name)
+VALUES('Використання ПК в цілому'),('Операційні системи'),('Програмування');
+
+INSERT INTO Category(_name)
+VALUES('Підручники'),('Апаратні засоби ПК'),('Захист і безпека ПК'),('Інші книги'),('Windows 2000'),('Linux'),('Unix'),('Інші операційні системи'),('C&C++'),('SQL');
+
+INSERT INTO Book(_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES
+(5110,'No', 'Апаратні засоби мультимедіа. Відеосистема РС',                                         15.51, 1,  400, '70х100/16', '2000-07-24', 5000, 1, 1),
+(4985,'No', 'Засвой самостійно модернізацію та ремонт ПК за 24 години, 2-ге вид.',                  18.90, 2,  288, '70х100/16', '2000-07-07', 5000, 1, 1),
+(5141,'No', 'Структури даних та алгоритми',                                                         37.80, 2,  384, '70х100/16', '2000-9-29',  5000, 1, 1),
+(5127,'No', 'Автоматизація інженерно-графічних робіт',                                              11.58, 1,  256, '70х100/16', '2000-6-15',  5000, 1, 1),
+(5110,'No', 'Апаратні засоби мультимедіа. Відеосистема РС',                                         15.51, 1,  400, '70х100/16', '2000-07-24', 5000, 1, 2),
+(5199,'No', 'Залізо IBM 2001',                                                                      30.07, 3,  368, '70х100/16', '2000-12-02', 5000, 1, 2),
+(3851,'No', 'Захист інформації та безпека комп''ютерних систем',                                    26.00, 4,  480, '84х108/16', NULL,         5000, 1, 3),
+(3932,'No', 'Як перетворити персональний комп''ютер на вимірювальний комплекс',                     7.65,  5,  144, '60х88/16',  '1999-06-09', 5000, 1, 4),
+(4713,'No', 'Plug-ins. Додаткові програми для музичних програм',                                    11.41, 5,  144, '70х100/16', '2000-02-22', 5000, 1, 4),
+(5217,'No', 'Windows МЕ. Найновіші версії програм',                                                 16.57, 6,  320, '70х100/16', '2000-08-25', 5000, 2, 5),
+(4829,'No', 'Windows 2000 Professional крок за кроком з CD',                                        27.25, 7,  320, '70х100/16', '2000-04-28', 5000, 2, 5),
+(5170,'No', 'Linux версії',                                                                         24.43, 5,  346, '70х100/16', '2000-09-29', 5000, 2, 6),
+(860, 'No', 'Операційна система UNIX',                                                              3.50,  1,  395, '84х100\\16','1997-05-05', 5000, 2, 7),
+(44,  'No', 'Відповіді на актуальні запитання щодо OS/2 Warp',                                      5.00,  4,  352, '60х84/16',  '1996-03-20', 5000, 2, 8),
+(5176,'No', 'Windows Ме. Супутник користувача',                                                     12.79, 1,  306, '',          '2000-10-10', 5000, 2, 8),
+(5462,'No', 'Мова програмування С++. Лекції та вправи',                                             29.00, 4,  656, '84х108/16', '2000-12-12', 5000, 3, 9),
+(4982,'No', 'Мова програмування С. Лекції та вправи',                                               29.00, 4,  432, '84х108/16', '2000-07-12', 5000, 3, 9),
+(4687,'No', 'Ефективне використання C++ .50 рекомендацій щодо покращення ваших програм та проектів',17.60, 5,  240, '70х100/16', '2000-02-03', 5000, 3, 9),
+(235, 'No', 'Інформаційні системи і структури даних',                                               NULL,  8,  288, '60х90/16',  NULL,         400,  1, 4),
+(8746,'Yes','Бази даних в інформаційних системах',                                                  NULL,  9,  418, '60х84/16',  '2018-25-07', 100,  3, 10),
+(2154,'Yes','Сервер на основі операційної системи FreeBSD 6.1',                                     0,     9,  216, '60х84/16',  '2015-03-11', 500,  3, 8),
+(2662,'No', 'Організація баз даних та знань',                                                       0,     10, 208, '60х90/16',  '2001-10-10', 1000, 3, 10),
+(5641,'Yes','Організація баз даних та знань',                                                       0,     1,  384, '70х100/16', '2021-15-12', 5000, 3, 10);
+
+
