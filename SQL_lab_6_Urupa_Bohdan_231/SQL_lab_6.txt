@@ -1,0 +1,248 @@
+﻿#1. Вивести значення наступних колонок: назва книги, ціна, назва видавництва. Використовувати внутрішнє з'єднання, застосовуючи where.
+SELECT 
+	Book._name AS name_Book, 
+	Book._price AS price_Book,
+	Publisher._name AS name_Publisher
+FROM Book, Publisher
+WHERE Book.id_publisher = Publisher.id_publisher;
+
+#2. Вивести значення наступних колонок: назва книги, назва категорії. Використовувати внутрішнє з'єднання, застосовуючи inner join.
+SELECT
+	Book._name AS name_Book, 
+	Category._name AS name_Category
+FROM Book
+INNER JOIN Category ON Book.id_category = Category.id_category;
+
+#3. Вивести значення наступних колонок: назва книги, ціна, назва видавництва, формат.
+SELECT
+	Book._name AS name_Book,
+    Book._price AS price_Book,
+    Publisher._name AS name_Publisher,
+    Book._format AS format_Book
+FROM Book
+JOIN Publisher ON Book.id_publisher = Publisher.id_publisher;
+
+#4. Вивести значення наступних колонок: тема, категорія, назва книги, назва видавництва. Фільтр по темам і категоріям.
+SELECT
+	Subject._name AS name_Subject,
+    Category._name AS name_Category,
+    Book._name AS name_Book,
+    Publisher._name AS name_Publisher
+FROM book
+JOIN Subject ON Book.id_subject = Subject.id_subject
+JOIN Category ON Book.id_category = Category.id_category
+JOIN Publisher ON Book.id_publisher = Publisher.id_publisher
+WHERE Subject._name = 'Використання ПК в цілому' AND Category._name = 'Підручники';
+
+#5. Вивести книги видавництва 'BHV', видані після 2000 р
+SELECT
+	Book._name AS name_Book,
+    Book._date AS date_Book,
+    Publisher._name AS name_Publisher
+FROM Book
+JOIN Publisher ON Book.id_publisher = Publisher.id_publisher
+WHERE Publisher._name = 'BHV' AND YEAR(Book._date) > 2000;
+#або так, якщо малась на увазі включення 'BHV' в назву видавництва
+SELECT
+	Book._name AS name_Book,
+    Book._date AS date_Book,
+    Publisher._name AS name_Publisher
+FROM Book
+JOIN Publisher ON Book.id_publisher = Publisher.id_publisher
+WHERE Publisher._name REGEXP 'BHV' AND YEAR(Book._date) > 2000;
+
+#6. Вивести загальну кількість сторінок по кожній назві категорії. Фільтр по спадаючій кількості сторінок.
+SELECT
+	Category._name AS name_Category,
+    SUM(Book._pages) AS SUM_pages_Book
+FROM Book
+JOIN Category ON Book.id_category = Category.id_category
+GROUP BY Book.id_category
+ORDER BY SUM_pages_Book DESC;
+
+#7. Вивести середню вартість книг по темі 'Використання ПК' і категорії 'Linux'.
+SELECT
+	AVG(Book._price) AS AVG_price_Book,
+    Subject._name AS name_Publisher,
+    Category._name AS name_Category
+FROM Book
+JOIN Subject ON Book.id_subject = Subject.id_subject
+JOIN Category ON Book.id_category = Category.id_category
+WHERE Subject._name ='Використання ПК' AND Category._name = 'Linux';
+#або так, якщо малась на увазі включення 'Використання ПК' в назву теми
+SELECT
+	AVG(Book._price) AS AVG_price_Book,
+    Subject._name AS name_Publisher,
+    Category._name AS name_Category
+FROM Book
+JOIN Subject ON Book.id_subject = Subject.id_subject
+JOIN Category ON Book.id_category = Category.id_category
+WHERE Subject._name REGEXP 'Використання ПК' AND Category._name = 'Linux';
+
+#8. Вивести всі дані універсального відношення. Використовувати внутрішнє з'єднання, застосовуючи where.
+SELECT *
+FROM Book, Publisher, Subject, Category
+WHERE Book.id_publisher = Publisher.id_publisher AND Book.id_subject = Subject.id_subject AND Book.id_category = Category.id_category;
+
+#9. Вивести всі дані універсального відношення. Використовувати внутрішнє з'єднання, застосовуючи inner join.
+SELECT *
+FROM Book
+INNER JOIN  Publisher ON Book.id_publisher = Publisher.id_publisher
+INNER JOIN Subject ON Book.id_subject = Subject.id_subject
+INNER JOIN Category ON Book.id_category = Category.id_category;
+
+#10. Вивести всі дані універсального відношення. Використовувати зовнішнє з'єднання, застосовуючи left join / rigth join.
+# left join
+SELECT *
+FROM Book
+LEFT JOIN Publisher ON Book.id_publisher = Publisher.id_publisher
+LEFT JOIN Subject ON Book.id_subject = Subject.id_subject
+LEFT JOIN Category ON Book.id_category = Category.id_category;
+# rigth join
+SELECT *
+FROM Publisher
+RIGHT JOIN Book ON Book.id_publisher = Publisher.id_publisher
+RIGHT JOIN Subject ON Book.id_subject = Subject.id_subject
+RIGHT JOIN Category ON Book.id_category = Category.id_category;
+# вивід однаковий при умові що це універсальне відношення, у випадку якщо ні, то можна записати так:
+SELECT *
+FROM Publisher
+RIGHT JOIN Book ON Book.id_publisher = Publisher.id_publisher
+LEFT JOIN Subject ON Book.id_subject = Subject.id_subject
+LEFT JOIN Category ON Book.id_category = Category.id_category;
+
+#11. Вивести пари книг, що мають однакову кількість сторінок. Використовувати само об’єднання і аліаси (self join).
+SELECT b1._name as book1, b2._name as book2, b1._pages
+FROM Book AS b1
+JOIN Book AS b2 ON b1._pages = b2._pages AND b1.id_book < b2.id_book
+ORDER BY b1._pages;
+
+#12. Вивести тріади книг, що мають однакову ціну. Використовувати самооб'єднання і аліаси (self join).
+SELECT b1._name as book1, b2._name as book2, b3._name as book3, b1._price
+FROM Book AS b1
+JOIN Book AS b2 ON b1._price = b2._price AND b1.id_book < b2.id_book
+JOIN Book AS b3 ON b1._price = b3._price AND b2._price = b3._price AND b1.id_book > b3.id_book
+ORDER BY b1._price;
+
+#13. Вивести всі книги категорії 'C ++'. Використовувати підзапити (subquery).
+SELECT 
+    B._name AS name_Book
+FROM Book AS B
+WHERE B.id_category = (
+    	SELECT C.id_category
+    	FROM Category AS C
+    	WHERE C._name = 'C++'
+	);
+#або так, якщо малась на увазі включення 'C++' в назву категорії
+SELECT 
+    B._name AS name_Book
+FROM Book AS B
+WHERE B.id_category = (
+    	SELECT C.id_category
+    	FROM Category AS C
+    	WHERE C._name REGEXP 'C++'
+	);
+
+#14. Вивести книги видавництва 'BHV', видані після 2000 р Використовувати підзапити (subquery).
+SELECT
+	B._name AS name_Book,
+    B._date AS date_Book
+FROM Book AS B
+WHERE B.id_publisher = (
+    	SELECT P.id_publisher
+    	FROM Publisher AS P
+    	WHERE P._name = 'BHV'
+    ) AND YEAR(B._date) > 2000;
+#або так, якщо малась на увазі включення 'BHV' в назву видавництва
+SELECT
+	B._name AS name_Book,
+    B._date AS date_Book
+FROM Book AS B
+WHERE B.id_publisher = (
+    	SELECT P.id_publisher
+    	FROM Publisher AS P
+    	WHERE P._name REGEXP 'BHV'
+    ) AND YEAR(B._date) > 2000;
+
+#15. Вивести список видавництв, у яких розмір книг перевищує 400 сторінок. Використовувати пов'язані підзапити (correlated subquery).
+
+SELECT 
+	P._name AS name_Publisher
+FROM Publisher AS P
+WHERE EXISTS (
+    	SELECT B.id_publisher
+    	FROM Book AS B
+    	WHERE P.id_publisher = B.id_publisher AND B._pages > 400
+	);
+
+#16. Вивести список категорій в яких більше 3-х книг. Використовувати пов'язані підзапити (correlated subquery).
+SELECT 
+	c._name AS name_Category
+FROM Category AS c
+WHERE (
+    	SELECT COUNT(B.id_category)
+    	FROM Book AS B
+    	WHERE c.id_category = b.id_category
+	) > 3;
+
+#17. Вивести список книг видавництва 'BHV', якщо в списку є хоча б одна книга цього видавництва. Використовувати exists.
+SELECT
+	B._name AS name_Book
+FROM Book AS B
+WHERE EXISTS(
+    	SELECT *
+    	FROM Publisher AS P
+    	WHERE P._name = 'BHV' AND
+    		P.id_publisher = B.id_publisher
+	);
+#або так, якщо малась на увазі включення 'BHV' в назву видавництва
+SELECT
+	B._name AS name_Book
+FROM Book AS B
+WHERE EXISTS(
+    	SELECT *
+    	FROM Publisher AS P
+    	WHERE P._name REGEXP 'BHV' AND
+    		P.id_publisher = B.id_publisher
+	);
+
+#18. Вивести список книг видавництва 'BHV', якщо в списку немає жодної книги цього видавництва. Використовувати not exists.
+SELECT 
+	B1._name AS name_Book
+FROM Book AS B1
+WHERE NOT EXISTS(
+    	SELECT * 
+    	FROM Book AS B2
+    	WHERE B2.id_publisher = (
+            	SELECT id_publisher
+            	FROM Publisher
+            	WHERE _name = 'BHV'
+        	) AND B1.id_publisher <> B2.id_publisher
+	);
+#або так, якщо малась на увазі включення 'BHV' в назву видавництва
+SELECT 
+	B1._name AS name_Book
+FROM Book AS B1
+WHERE NOT EXISTS(
+    	SELECT * 
+    	FROM Book AS B2
+    	WHERE B2.id_publisher = (
+            	SELECT id_publisher
+            	FROM Publisher
+            	WHERE _name REGEXP 'BHV'
+        	) AND B1.id_publisher <> B2.id_publisher
+	);
+
+#19. Вивести відсортований загальний список назв тем і категорій. Використовувати union.
+(SELECT * FROM Subject)
+UNION
+(SELECT * FROM Category)
+ORDER BY _name;
+
+#20. Вивести відсортований в зворотному порядку загальний список перших слів, назв книг і категорій що не повторюються. Використовувати union.
+
+(SELECT DISTINCT SUBSTRING_INDEX(B._name, ' ', 1) AS first_word_name FROM Book as B)
+UNION
+(SELECT DISTINCT SUBSTRING_INDEX(C._name, ' ', 1) AS first_word_name FROM Category as C)
+ORDER BY first_word_name DESC;
+
