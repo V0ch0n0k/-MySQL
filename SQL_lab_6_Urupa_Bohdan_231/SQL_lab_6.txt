@@ -33,6 +33,17 @@ JOIN Subject ON Book.id_subject = Subject.id_subject
 JOIN Category ON Book.id_category = Category.id_category
 JOIN Publisher ON Book.id_publisher = Publisher.id_publisher
 WHERE Subject._name = 'Використання ПК в цілому' AND Category._name = 'Підручники';
+#або так, якщо під словом 'фільтр' малося 'сортування'
+SELECT
+	Subject._name AS name_Subject,
+    Category._name AS name_Category,
+    Book._name AS name_Book,
+    Publisher._name AS name_Publisher
+FROM book
+JOIN Subject ON Book.id_subject = Subject.id_subject
+JOIN Category ON Book.id_category = Category.id_category
+JOIN Publisher ON Book.id_publisher = Publisher.id_publisher
+ORDER BY Subject._name, Category._name;
 
 #5. Вивести книги видавництва 'BHV', видані після 2000 р
 SELECT
