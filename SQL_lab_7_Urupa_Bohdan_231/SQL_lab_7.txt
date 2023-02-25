@@ -1,0 +1,327 @@
+﻿#ЛР №7
+#Проектування і перевірка збережених процедур (stored procedure): без параметрів, з вхідними параметрами, з вхідними параметрами зазамовчуванням, з вихідними параметрами
+#1. Вивести значення наступних колонок: назва книги, ціна, назва видавництва, формат.
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_Data_Book_parag1 $$
+
+CREATE PROCEDURE Display_Data_Book_parag1()
+COMMENT 'Виводить значення колонок: назва книги, ціна, назва видавництва, формат.'
+BEGIN
+	SELECT
+		Book._name AS name_Book, 
+		Book._price AS price_Book,
+		Publisher._name AS name_Publisher,
+		Book._format AS format_Book
+	FROM Book
+	INNER JOIN Publisher ON Book.id_publisher = Publisher.id_publisher;
+END $$
+DELIMITER ;
+
+CALL Display_Data_Book_parag1();
+
+#2. Вивести значення наступних колонок: тема, категорія, назва книги, назва видавництва. Фільтр по темам і категоріям.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_Data_Book_parag2 $$
+
+CREATE PROCEDURE Display_Data_Book_parag2()
+COMMENT 'Виводить значення наступних колонок: тема, категорія, назва книги, назва видавництва. Фільтр по темам і категоріям.'
+BEGIN
+	SELECT
+		Subject._name AS name_Subject,
+    	Category._name AS name_Category,
+	    Book._name AS name_Book,
+   	 	Publisher._name AS name_Publisher
+	FROM book
+	JOIN Subject ON Book.id_subject = Subject.id_subject
+	JOIN Category ON Book.id_category = Category.id_category
+	JOIN Publisher ON Book.id_publisher = Publisher.id_publisher
+	ORDER BY Subject._name, Category._name;
+END $$
+DELIMITER ;
+
+CALL Display_Data_Book_parag2();
+
+#3. Вивести книги видавництва 'BHV', видані після 2000 р
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_books_publishing_house_X_published_after_YYYY_parag3 $$
+
+CREATE PROCEDURE Display_books_publishing_house_X_published_after_YYYY_parag3(IN _publ VARCHAR(50), IN _year DATE)
+COMMENT 'Виводить книги видавництва X, видані після YYYY р. За замовчуванням  видавництво ''BHV'', після 2000 р'
+BEGIN
+	SET @_publ = IFNULL(_publ, 'BHV');
+    SET @_year = IFNULL(_year, 2000);
+    
+	SELECT
+		Book._name AS name_Book,
+   	 	Book._date AS date_Book,
+    	Publisher._name AS name_Publisher
+	FROM Book
+	JOIN Publisher ON Book.id_publisher = Publisher.id_publisher
+	WHERE Publisher._name REGEXP @_publ AND YEAR(Book._date) > @_year;
+END $$
+DELIMITER ;
+
+CALL Display_books_publishing_house_X_published_after_YYYY_parag3(NULL, NULL);
+CALL Display_books_publishing_house_X_published_after_YYYY_parag3('BHV', '2000-01-01');
+
+
+#4. Вивести загальну кількість сторінок по кожній назві категорії. Фільтр по спадаючій / зростанню кількості сторінок.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Displays_number_of_pages_in_each_category_parag4 $$
+
+CREATE PROCEDURE Displays_number_of_pages_in_each_category_parag4(IN _filter  VARCHAR(4)) 
+COMMENT 'Виводить загальну кількість сторінок по кожній назві категорії. Фільтр по спаданню / зростанню кількості сторінок, в залежності від перереданого аргумента ASC, DESC, or NULL(ASC)'
+BEGIN
+	SET @_filter = IFNULL(_filter, 'ASC');
+	IF @_filter <> 'ASC' AND @_filter <> 'DESC' THEN
+        SIGNAL SQLSTATE '22001' SET MESSAGE_TEXT = 'Invalid sort order. change input to ASC, DESC, or NULL.';
+    END IF;
+
+	SELECT
+		Category._name AS name_Category,
+    	SUM(Book._pages) AS SUM_pages_Book
+	FROM Book
+	JOIN Category ON Book.id_category = Category.id_category
+	GROUP BY Book.id_category
+    ORDER BY 	
+    	CASE WHEN @_filter = 'ASC'  THEN SUM(Book._pages) END ASC,
+    	CASE WHEN @_filter = 'DESC' THEN SUM(Book._pages) END DESC;
+END $$
+DELIMITER ;
+
+CALL Displays_number_of_pages_in_each_category_parag4(NULL);
+CALL Displays_number_of_pages_in_each_category_parag4('ASC');
+CALL Displays_number_of_pages_in_each_category_parag4('DESC');
+
+#5. Вивести середню вартість книг по темі 'Використання ПК' і категорії 'Linux'.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_avg_price_of_books_on_subject_X_and_category_Y_parag5 $$
+
+CREATE PROCEDURE Display_avg_price_of_books_on_subject_X_and_category_Y_parag5(IN _subject VARCHAR(255), IN _category VARCHAR(50)) 
+COMMENT'Виводить середню варнтість книг по темі X і категорії Y. За замовчуванням  тема ''Використання ПК'', категорія ''Linux'''
+BEGIN
+SET @_subject = IFNULL(_subject, 'Використання ПК');
+SET @_category = IFNULL(_category, 'Linux');
+
+SELECT
+	AVG(Book._price) AS AVG_price_Book,
+    Subject._name AS name_Publisher,
+    Category._name AS name_Category
+FROM Book
+JOIN Subject ON Book.id_subject = Subject.id_subject
+JOIN Category ON Book.id_category = Category.id_category
+WHERE Subject._name REGEXP @_subject AND Category._name = @_category;
+END $$
+DELIMITER ;
+
+CALL Display_avg_price_of_books_on_subject_X_and_category_Y_parag5('Використання ПК', 'Linux');
+CALL Display_avg_price_of_books_on_subject_X_and_category_Y_parag5(NULL, NULL);
+
+#6. Вивести всі дані універсального відношення.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_all_data_of_the_universal_relation_parag6 $$
+
+CREATE PROCEDURE Display_all_data_of_the_universal_relation_parag6() 
+COMMENT'Виводить всі дані універсального відношення'
+BEGIN
+SELECT *
+FROM Book
+INNER JOIN  Publisher ON Book.id_publisher = Publisher.id_publisher
+INNER JOIN Subject ON Book.id_subject = Subject.id_subject
+INNER JOIN Category ON Book.id_category = Category.id_category;
+END $$
+DELIMITER ;
+
+CALL Display_all_data_of_the_universal_relation_parag6();
+
+#7. Вивести пари книг, що мають однакову кількість сторінок.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_pair_books_by_count_of_pages_parag7 $$
+
+CREATE PROCEDURE Display_pair_books_by_count_of_pages_parag7()
+COMMENT'Виводить пари книг, що мають однакову кількість сторінок'
+BEGIN
+	SELECT
+    	b1._name as book1,
+        b2._name as book2,
+        b1._pages
+	FROM Book AS b1
+	JOIN Book AS b2 ON b1._pages = b2._pages AND b1.id_book < b2.id_book
+	ORDER BY b1._pages;
+END $$
+DELIMITER ;
+
+CALL Display_pair_books_by_count_of_pages_parag7();
+
+#8. Вивести тріади книг, що мають однакову ціну.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_triads_books_by_price_parag8 $$
+
+CREATE PROCEDURE Display_triads_books_by_price_parag8()
+COMMENT'Виводить тріади книг, що мають однакову ціну'
+BEGIN
+	SELECT
+    	b1._name as book1,
+        b2._name as book2,
+        b3._name as book3,
+        b1._price
+	FROM Book AS b1
+	JOIN Book AS b2 ON b1._price = b2._price AND b1.id_book < b2.id_book
+	JOIN Book AS b3 ON b1._price = b3._price AND b2._price = b3._price AND b1.id_book > b3.id_book
+	ORDER BY b1._price;
+END $$
+DELIMITER ;
+
+CALL Display_triads_books_by_price_parag8();
+
+#9. Вивести всі книги категорії 'C ++'.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Displays_all_books_of_category_X_parag9 $$
+
+CREATE PROCEDURE Displays_all_books_of_category_X_parag9(IN _category VARCHAR(50)) 
+COMMENT'Виводить всі книги категорії X. За замовчуванням  категорія ''C++'''
+BEGIN
+SET @_category = IFNULL(_category, 'C++');
+
+SELECT 
+    B._name AS name_Book
+FROM Book AS B
+WHERE B.id_category = (
+    	SELECT C.id_category
+    	FROM Category AS C
+    	WHERE C._name REGEXP @_category
+	);
+END $$
+DELIMITER ;
+
+CALL Displays_all_books_of_category_X_parag9(NULL);
+CALL Displays_all_books_of_category_X_parag9('C++');
+
+#10. Вивести список видавництв, у яких розмір книг перевищує 400 сторінок.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Displays_publishers_whose_books_are_longer_than_X_pages_parag10 $$
+
+CREATE PROCEDURE Displays_publishers_whose_books_are_longer_than_X_pages_parag10(IN _pages INT UNSIGNED) 
+COMMENT'Виводить список видавництв, у яких розмір книг перевищує X сторінок. За замовчуванням 400 сторінок'
+BEGIN
+	SET @_pages = IFNULL(_pages, 400);
+    
+	SELECT 
+		P._name AS name_Publisher
+	FROM Publisher AS P
+	WHERE EXISTS (
+    		SELECT B.id_publisher
+    		FROM Book AS B
+    		WHERE P.id_publisher = B.id_publisher AND B._pages > @_pages
+		);
+    END $$
+DELIMITER ;
+
+CALL Displays_publishers_whose_books_are_longer_than_X_pages_parag10(NULL);
+CALL Displays_publishers_whose_books_are_longer_than_X_pages_parag10(400);
+
+#11. Вивести список категорій за якими більше 3-х книг.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Displays_categories_that_contain_more_than_X_books_parag11 $$
+
+CREATE PROCEDURE Displays_categories_that_contain_more_than_X_books_parag11(IN _number_of_books INT UNSIGNED) 
+COMMENT'Виводить список категорій, у яких більше X книг. За замовчуванням більше 3 книг'
+BEGIN
+	SET @_number_of_books = IFNULL(_number_of_books, 3);
+SELECT 
+	c._name AS name_Category
+FROM Category AS c
+WHERE (
+    	SELECT COUNT(B.id_category)
+    	FROM Book AS B
+    	WHERE c.id_category = b.id_category
+	) > @_number_of_books;
+    END $$
+DELIMITER ;
+
+CALL Displays_categories_that_contain_more_than_X_books_parag11(NULL);
+CALL Displays_categories_that_contain_more_than_X_books_parag11(3);
+
+#12. Вивести список книг видавництва 'BHV', якщо в списку є хоча б одна книга цього видавництва.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_list_of_books_from_the_X_publishing_house_parag12 $$
+
+CREATE PROCEDURE Display_list_of_books_from_the_X_publishing_house_parag12(IN _publ VARCHAR(50)) 
+COMMENT'Виводить список книг видавництва X, якщо в списку є хоча б одна книга цього видавництва.  За замовчуванням видавництво ''BHV'''
+BEGIN
+	SET @_publ = IFNULL(_publ, 'BHV');
+
+SELECT
+	B._name AS name_Book
+FROM Book AS B
+WHERE EXISTS(
+    	SELECT *
+    	FROM Publisher AS P
+    	WHERE P._name REGEXP @_publ AND
+    		P.id_publisher = B.id_publisher
+	);
+    END $$
+DELIMITER ;
+
+CALL Display_list_of_books_from_the_X_publishing_house_parag12(NULL);
+CALL Display_list_of_books_from_the_X_publishing_house_parag12('BHV');
+
+#13. Вивести список книг видавництва 'BHV', якщо в списку немає жодної книги цього видавництва.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_list_of_books_from_the_X_publishing_house_parag13 $$
+
+CREATE PROCEDURE Display_list_of_books_from_the_X_publishing_house_parag13(IN _publ VARCHAR(50)) 
+COMMENT'Виводить список книг видавництва X, якщо в списку немає жодної книги цього видавництва.  За замовчуванням видавництво ''BHV'''
+BEGIN
+	SET @_publ = IFNULL(_publ, 'BHV');
+
+		SELECT 
+		B1._name AS name_Book
+	FROM Book AS B1
+	WHERE NOT EXISTS(
+    		SELECT * 
+    		FROM Book AS B2
+    		WHERE B2.id_publisher = (
+            		SELECT id_publisher
+            		FROM Publisher
+            		WHERE _name REGEXP @_publ
+        		) AND B1.id_publisher <> B2.id_publisher
+		);
+    END $$
+DELIMITER ;
+
+CALL Display_list_of_books_from_the_X_publishing_house_parag13(NULL);
+CALL Display_list_of_books_from_the_X_publishing_house_parag13('BHV');
+
+#14. Вивести відсортоване загальний список назв тем і категорій.
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_a_sorted_general_list_of_topic_and_category_parag14 $$
+
+CREATE PROCEDURE Display_a_sorted_general_list_of_topic_and_category_parag14() 
+COMMENT'Виводить відсортований загальний список назв тем і категорій'
+BEGIN
+	(SELECT * FROM Subject)
+	UNION
+	(SELECT * FROM Category)
+	ORDER BY _name;
+END $$
+DELIMITER ;
+
+CALL Display_a_sorted_general_list_of_topic_and_category_parag14();
+
+#15. Вивести відсортований в зворотному порядку загальний список перших слів назв книг і категорій що не повторюються
+DELIMITER $$
+DROP PROCEDURE IF EXISTS Display_list_parag15 $$
+
+CREATE PROCEDURE Display_list_parag15() 
+COMMENT'Виводить відсортований в зворотному порядку загальний список перших слів назв книг і категорій що не повторюються'
+BEGIN
+	(SELECT DISTINCT SUBSTRING_INDEX(B._name, ' ', 1) AS first_word_name FROM Book as B)
+	UNION
+	(SELECT DISTINCT SUBSTRING_INDEX(C._name, ' ', 1) AS first_word_name FROM Category as C)
+	ORDER BY first_word_name DESC;
+END $$
+DELIMITER ;
+
+CALL Display_list_parag15();
