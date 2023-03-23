@@ -216,7 +216,7 @@ SELECT
     ROUND((SUM(`price_`) / SUM(`pages_`)) * 100, 0) AS price_per_page_in_pennies
 FROM `booktable`
 GROUP BY `publisher_`
-HAVING price_per_page > 10;
+HAVING price_per_page_in_pennies > 10;
 
 
 	
