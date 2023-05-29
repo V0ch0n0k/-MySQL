@@ -1,0 +1,101 @@
+﻿/*ЛР №10 (SQL Server)
+Проектування таблиць з використанням призначених для користувача типів даних (user defined data types), замовчувань (defaults) і правил (rules).
+1. Створити користувальницький тип даних для зберігання оцінки учня на основі стандартного типу tinyint з можливістю використання порожніх
+значень.
+2. Створити об'єкт-замовчування (default) зі значенням 3.
+3. Зв'язати об'єкт-замовчування з призначеним для користувача типом даних для оцінки.
+4. Отримати інформацію про призначений для користувача тип даних.
+5. Створити об'єкт-правило (rule): a> = 1 і a <= 5 і зв'язати його з призначеним для користувача типом даних для оцінки.
+6. Створити таблицю "Успішність студента", використовуючи новий тип даних. У таблиці повинні бути оцінки студента з кількох предметів.
+7. Скасувати всі прив'язки і видалити з бази даних тип даних користувача, замовчування і правило.
+*/
+
+/*
+Цю лаботаторну не вдасться винонати на MariaDB(MySQL):
+	Тип сервера: MariaDB
+	Версія сервера: 10.4.27-MariaDB
+	Версія клієнта бази даних: libmysql - mysqlnd 8.2.0
+
+із-за відсутності «користувацьких» типів даних, тому ЛР №10 виконана за допомогою SQL Server
+*/
+
+
+--1) Створення типу даних Grade
+CREATE TYPE Grade FROM  TINYINT NULL;
+GO
+
+--2) Створення об'єкта-замовчування DefaultGrade
+CREATE DEFAULT DefaultGrade AS 3;
+GO
+
+--3) Зв'язування об'єкта-замовчування з типом даних
+EXEC sys.sp_bindefault 'DefaultGrade', 'Grade';
+GO
+
+--4) Оримати інформацію про тип даних Grade
+EXEC sys.sp_help 'Grade';
+GO
+
+--5) Створення об'єкта-правила та пов'язування його з типом даних Grade
+CREATE RULE GradeRule
+AS @a >= 1 AND @a <= 5;
+GO
+
+EXEC sys.sp_bindrule 'GradeRule', 'Grade';
+GO
+
+--6) Створення таблиці "Успішність студента"
+CREATE TABLE StudentSuccess (
+    StudentID INT NOT NULL IDENTITY(1,1) PRIMARY KEY,
+    Mathematics Grade,
+    Physics Grade,
+    Chemistry Grade
+);
+GO
+
+INSERT INTO StudentSuccess (Mathematics, Physics, Chemistry)
+VALUES
+    (4, 3, 5),
+    (1, 1, DEFAULT),
+    (DEFAULT, DEFAULT, DEFAULT);
+GO
+
+SELECT * FROM StudentSuccess;
+GO
+
+--7) Скасування всіх прив'язок і видалення з бази даних типу даних користувача, замовчування і правила
+EXEC sys.sp_unbindrule 'StudentSuccess.Mathematics';
+EXEC sys.sp_unbindrule 'StudentSuccess.Physics';
+EXEC sys.sp_unbindrule 'StudentSuccess.Chemistry';
+GO
+
+EXEC sys.sp_unbindefault 'StudentSuccess.Mathematics';
+EXEC sys.sp_unbindefault 'StudentSuccess.Physics';
+EXEC sys.sp_unbindefault 'StudentSuccess.Chemistry';
+GO
+
+
+ALTER TABLE StudentSuccess ALTER COLUMN Mathematics INT;
+ALTER TABLE StudentSuccess ALTER COLUMN Physics INT;
+ALTER TABLE StudentSuccess ALTER COLUMN Chemistry INT;
+GO
+
+-- Видалення типу даних користувача, замовчування і правила
+EXEC sys.sp_unbindrule 'Grade';
+GO
+
+DROP RULE GradeRule;
+GO
+
+EXEC sys.sp_unbindefault'Grade';
+GO
+
+DROP DEFAULT DefaultGrade;
+GO
+
+DROP TYPE Grade;
+GO
+
+-- Видалення таблиці "Успішність студента"
+DROP TABLE StudentSuccess;
+GO
