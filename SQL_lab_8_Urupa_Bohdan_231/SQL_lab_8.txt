@@ -15,7 +15,7 @@ BEGIN
             SET MESSAGE_TEXT = 'Maximum limit of 10 subjects reached.';
     ELSEIF total_subjects < 5 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = total_subjects;#'Minimum limit of 5 subjects not reached.';
+            SET MESSAGE_TEXT = 'Minimum limit of 5 subjects not reached.';
     END IF;
 END $$
 
