@@ -1,0 +1,175 @@
+﻿#ЛР №9
+#Проектування користувальницьких функцій (user defined function). Робота з SQL курсором (cursor)
+
+#1. Розробити та перевірити скалярну (scalar) функцію, що повертає загальну вартість книг виданих в певному році.
+DELIMITER $$
+DROP FUNCTION IF EXISTS Get_Total_Cost_Of_Books_By_Year_parag1 $$
+
+CREATE FUNCTION Get_Total_Cost_Of_Books_By_Year_parag1(`year` INT) RETURNS DECIMAL(10, 2)
+BEGIN
+    DECLARE totalValue DECIMAL(10, 2);
+    
+    SELECT SUM(_price) INTO totalValue
+    FROM Book
+    	WHERE YEAR(_date) = `year`;
+    
+    IF totalValue IS NULL THEN
+        SET totalValue = 0.00;
+    END IF;
+    
+    RETURN totalValue;
+END $$
+DELIMITER ;
+
+SELECT Get_Total_Cost_Of_Books_By_Year_parag1(2000) AS total_value;
+
+#2. Розробити і перевірити табличну (inline) функцію, яка повертає список книг виданих в певному році.
+# MySQL не підтримуються inline функції. Ось приклад з SQL Server
+/*
+DROP FUNCTION IF EXISTS Get_List_Books_By_Year_parag2;
+
+CREATE FUNCTION Get_List_Books_By_Year_parag2(`year` INT)
+RETURNS TABLE READS SQL DATA
+AS RETURN (
+    SELECT id_book, _code, _name, _price, _pages
+    FROM Book
+    	WHERE YEAR(_date) = `year` ;
+
+
+SELECT * FROM Get_List_Books_By_Year_parag2(2000);
+*/
+#3. Розробити і перевірити функцію типу multi-statement, яка буде:
+	#a. приймати в якості вхідного параметра рядок, що містить список назв видавництв, розділених символом ‘;’;
+	#b. виділяти з цього рядка назву видавництва;
+	#c. формувати нумерований список назв видавництв.
+DELIMITER $$
+DROP FUNCTION IF EXISTS Generate_Publisher_List_parag3$$
+
+CREATE FUNCTION Generate_Publisher_List_parag3(publisherList TEXT) RETURNS TEXT
+BEGIN
+    DECLARE result TEXT;
+    DECLARE publisherName TEXT;
+    DECLARE publisherCounter INT DEFAULT 0;
+    SET result = '';
+    
+    WHILE publisherList != '' DO
+    	SET publisherCounter = publisherCounter + 1;
+        
+        SET publisherName = SUBSTRING_INDEX(publisherList, ';', 1);
+        SET publisherList = SUBSTRING(publisherList, LENGTH(publisherName) + 2);
+        SET result = CONCAT(result, publisherCounter, '. ', publisherName, '\n');
+    END WHILE;
+    RETURN result;
+END $$
+
+DELIMITER ;  
+
+SELECT Generate_Publisher_List_parag3('Publisher_1;Publisher_2;Publisher_3') AS PublisherList;
+
+#4. Виконати набір операцій по роботі з SQL курсором: оголосити курсор;
+	#a. використовувати змінну для оголошення курсору;
+	#b. відкрити курсор;
+	#c. переприсвоїти курсор іншої змінної;
+	#d. виконати вибірку даних з курсору;
+	#e. закрити курсор;
+    
+USE librarybd; 
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS my_Proc_Cur_parag4$$
+
+CREATE PROCEDURE my_Proc_Cur_parag4(IN book_year INT, INOUT str_data TEXT)
+BEGIN
+	DECLARE counter INTEGER DEFAULT 0;
+    
+	DECLARE `id` INT DEFAULT 0;
+	DECLARE `code` INT UNSIGNED DEFAULT 0;
+	DECLARE `name` VARCHAR(100) DEFAULT '';
+	DECLARE `price` DECIMAL(8,2) DEFAULT 0;
+	DECLARE `pages` INT UNSIGNED DEFAULT 0;
+    
+	-- Оголошення курсора
+	DECLARE cur CURSOR FOR
+	SELECT id_book, _code, _name, _price, _pages
+		FROM book
+		WHERE YEAR(_date) = book_year;
+	
+	DECLARE CONTINUE HANDLER
+	FOR NOT FOUND SET counter = 1;
+	-- Відкриття курсора
+	OPEN cur;
+	
+	-- Виконання вибірки даних з курсору
+	get_datas: LOOP
+    	
+		FETCH NEXT FROM cur INTO `id`, `code`, `name`, `price`, `pages`;
+		IF counter = 1 THEN 
+			LEAVE get_datas;
+		END IF;
+        
+		SET str_data = CONCAT(str_data,
+							'id_book: ', IFNULL(CAST(`id` AS CHAR), 'NULL'), '\n',
+							'_code: ', IFNULL(CAST(`code` AS CHAR), 'NULL'), '\n',
+							'_name: ', IFNULL(`name`, 'NULL'), '\n',
+							'_price: ', IFNULL(CAST(`price` AS CHAR), 'NULL'), '\n',
+							'_pages: ', IFNULL(CAST(`pages` AS CHAR), 'NULL'), '\n'
+							);       
+	END LOOP get_datas;
+	-- Закриття курсора
+	CLOSE cur;
+
+END $$
+DELIMITER ;
+
+SET @str_data = "";
+CALL my_Proc_Cur_parag4(2000, @str_data);
+SELECT @str_data;
+
+#5. звільнити курсор. Розробити курсор для виводу списка книг виданих у визначеному році.
+#DEALLOCATE cur;
+
+USE librarybd; 
+
+DELIMITER $$
+DROP FUNCTION IF EXISTS Get_List_Books_By_Year_parag5$$
+
+CREATE FUNCTION Get_List_Books_By_Year_parag5(book_year INT) RETURNS TEXT
+BEGIN
+	DECLARE counter INTEGER DEFAULT 0;
+    DECLARE str_data TEXT DEFAULT '';
+    
+	DECLARE `name`  VARCHAR(100);
+
+	-- Оголошення курсора
+	DECLARE cur CURSOR FOR
+	SELECT `_name`
+		FROM book
+		WHERE YEAR(_date) = book_year;
+	
+	DECLARE CONTINUE HANDLER
+	FOR NOT FOUND SET counter = 1;
+	-- Відкриття курсора
+	OPEN cur;
+	
+	-- Виконання вибірки даних з курсору
+	get_datas: LOOP
+    	
+		FETCH NEXT FROM cur INTO `name`; 
+		IF counter = 1 THEN
+			LEAVE get_datas;
+		END IF;
+        
+		SET str_data = CONCAT(str_data, IFNULL(`name`, 'NULL'),'|');       
+	END LOOP get_datas;
+    
+    SET str_data = LEFT(str_data, LENGTH(str_data) - 1);
+	-- Закриття курсора
+	CLOSE cur;
+	#DEALLOCATE cur;
+
+    RETURN str_data;
+END $$
+
+DELIMITER ;
+
+SELECT Get_List_Books_By_Year_parag5(2015);
