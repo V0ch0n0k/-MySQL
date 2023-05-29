@@ -1,0 +1,237 @@
+﻿#ЛР №8
+#Проектування і перевірка тригерів (trigger), що активізуються при додаванні (insert), виправленні (update) і видаленні (delete) даних
+#1. Кількість тем може бути в діапазоні від 5 до 10.
+DELIMITER $$
+DROP TRIGGER IF EXISTS `trigger_1`$$
+
+CREATE TRIGGER `trigger_1`
+BEFORE INSERT ON Subject FOR EACH ROW
+BEGIN 
+	DECLARE total_subjects INT;
+    SELECT COUNT(NEW.id_subject) INTO total_subjects FROM Subject;
+    
+    IF total_subjects >= 10 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Maximum limit of 10 subjects reached.';
+    ELSEIF total_subjects < 5 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = total_subjects;#'Minimum limit of 5 subjects not reached.';
+    END IF;
+END $$
+
+DELIMITER ;
+
+INSERT INTO Subject (_name)
+VALUES 
+	('New Subject_1'),
+    ('New Subject_2'),
+    ('New Subject_3');
+
+#2. Новинкою може бути тільки книга видана в поточному році.
+DELIMITER $$
+DROP TRIGGER IF EXISTS `trigger_2`$$
+
+CREATE TRIGGER trigger_2
+BEFORE INSERT ON `book` FOR EACH ROW
+BEGIN
+    DECLARE current_year INT;
+    SET current_year = YEAR(CURRENT_DATE);
+    
+    IF NEW._novelty = 'Yes' AND YEAR(NEW._date) <> current_year THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Only a book published in the current year can be a novelty.';
+    END IF;
+END $$
+DELIMITER ;
+
+INSERT INTO `book` (_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES (2022,'Yes', 'qwe', 20.22, 1,  500, '70х100/16', '2022-01-01', 5000, 1, 1);
+
+INSERT INTO `book` (_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES (2023,'Yes', 'asd', 20.23, 1,  500, '70х100/16', '2023-01-01', 5000, 1, 1);
+
+#3. Книга з кількістю сторінок до 100 не може коштувати більше 10 $, до 200 - 20 $, до 300 - 30 $.
+DELIMITER $$
+DROP TRIGGER IF EXISTS trigger_3$$
+
+CREATE TRIGGER trigger_3
+BEFORE INSERT ON `book` FOR EACH ROW
+BEGIN
+	IF 
+        (NEW._pages < 100 AND NEW._price > 10) OR 
+		(NEW._pages < 200 AND NEW._price > 20) OR
+    	(NEW._pages < 300 AND NEW._price > 30)
+    THEN
+    	SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'The price of the book does not meet the standard of the number of pages';
+	END IF;
+END $$
+DELIMITER ;
+
+INSERT INTO `book` (_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES (2023,'Yes', 'asd', 20.23, 1,  200, '70х100/16', '2023-01-01', 5000, 1, 1);
+
+INSERT INTO `book` (_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES (2023,'Yes', 'asd', 10.01, 1,  99, '70х100/16', '2023-01-01', 5000, 1, 1);
+#4. Видавництво "BHV" не випускає книги накладом меншим 5000, а видавництво Diasoft - 10000.
+DELIMITER $$
+DROP TRIGGER IF EXISTS trigger_4$$
+
+CREATE TRIGGER trigger_4
+BEFORE INSERT ON `book` FOR EACH ROW
+BEGIN
+	DECLARE name_publisher VARCHAR(50);
+	SELECT _name INTO name_publisher FROM `publisher` WHERE id_publisher = NEW.id_publisher;
+	IF 
+    	(name_publisher <=> 'Видавнича група BHV' AND NEW._circulation < 5000) OR 
+        (name_publisher <=> 'DiaSoft' AND NEW._circulation < 1000)
+			THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'The publishing house does not issue books in smaller editions';
+	END IF;
+END $$
+DELIMITER ;
+
+INSERT INTO `book` (_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES (2023,'Yes', 'asd', 10.01, 1,  100, '70х100/16', '2023-01-01', 5000, 1, 1);
+
+#5. Книги з однаковим кодом повинні мати однакові дані.
+DELIMITER $$
+DROP TRIGGER IF EXISTS trigger_5$$
+
+CREATE TRIGGER trigger_5
+BEFORE INSERT ON `book` FOR EACH ROW
+BEGIN
+    DECLARE count INT DEFAULT 0;
+    SET count = 
+    (
+        SELECT COUNT(*) FROM Book 
+        WHERE _code = NEW._code AND 
+        	(
+           		_name <> NEW._name OR
+            	_novelty <> NEW._novelty OR
+            	_price <> NEW._price OR
+            	id_publisher <> NEW.id_publisher OR
+            	_pages <> NEW._pages OR
+            	_format <> NEW._format OR
+            	_date <> NEW._date OR
+            	_circulation <> NEW._circulation OR
+            	id_subject <> NEW.id_subject OR
+            	id_category <> NEW.id_category
+          	)
+    );
+    IF count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Duplicate book code found';
+    END IF;
+END$$
+DELIMITER ;
+                 
+INSERT INTO `book` (_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES (2023,'Yes', 'qwe', 10.01, 1,  100, '70х100/16', '2023-01-01', 4000, 1, 1);
+
+INSERT INTO `book` (_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES (2023,'Yes', 'asd', 10.01, 1,  100, '70х100/16', '2023-01-01', 5000, 1, 1);
+
+#6. При спробі видалення книги видається інформація про кількість видалених рядків. Якщо користувач не "dbo", то видалення забороняється.
+DELIMITER $$
+DROP TRIGGER IF EXISTS trigger_6$$
+
+CREATE TRIGGER trigger_6
+BEFORE DELETE ON `book` FOR EACH ROW
+BEGIN
+    IF (REGEXP_SUBSTR(TRIM(CURRENT_USER()), '^[^\@]+') <> 'dbo')  THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Deletion is not allowed for non-dbo users';
+    ELSE SET @num_rows = ROW_COUNT();
+    END IF;
+END$$
+DELIMITER ;
+
+DELETE FROM `book` WHERE `id_book` = 55;
+SELECT @num_rows AS 'Number of rows deleted';
+
+#7. Користувач "dbo" не має права змінювати ціну книги.
+DELIMITER $$
+DROP TRIGGER IF EXISTS trigger_7$$
+
+CREATE TRIGGER trigger_7
+BEFORE UPDATE ON `book` FOR EACH ROW
+BEGIN
+	IF (REGEXP_SUBSTR(TRIM(CURRENT_USER()), '^[^\@]+') <> 'dbo') THEN
+        SIGNAL SQLSTATE '45000'
+        	SET MESSAGE_TEXT = 'User "dbo" has no right to change the price of books';
+	END IF ;
+END$$
+DELIMITER ;
+
+#8. Видавництва ДМК і Еком підручники не видають.
+DELIMITER $$
+DROP TRIGGER IF EXISTS trigger_8$$
+
+CREATE TRIGGER trigger_8
+BEFORE INSERT ON `book` FOR EACH ROW
+BEGIN
+	DECLARE name_publisher VARCHAR(50);
+    DECLARE name_category VARCHAR(50);
+	SELECT _name INTO name_publisher FROM `publisher` WHERE id_publisher = NEW.id_publisher;
+    SELECT _name INTO name_category FROM `category` WHERE id_category = NEW.id_category;
+	IF name_category = 'Підручники' AND (name_publisher = 'ДМК' OR name_publisher = 'Еком') THEN 
+    	SIGNAL SQLSTATE '45000' 
+        	SET MESSAGE_TEXT = 'ДМК and Еком publishing houses do not publish textbooks';
+	END IF;
+END$$
+DELIMITER ;
+
+INSERT INTO `book` (_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES (2023,'Yes', 'asd', 10.01, 5,  100, '70х100/16', '2023-01-01', 5000, 1, 1);
+
+#9. Видавництво не може випустити більше 10 новинок протягом одного місяця поточного року.
+DELIMITER $$
+DROP TRIGGER IF EXISTS trigger_9$$
+
+CREATE TRIGGER trigger_9
+BEFORE INSERT ON `book` FOR EACH ROW
+BEGIN
+    DECLARE current_year INT;
+    DECLARE current_month INT;
+    DECLARE new_books_count INT;
+    
+    SET current_year = YEAR(CURDATE());
+    SET current_month = MONTH(CURDATE());
+    
+    SELECT COUNT(*) INTO new_books_count
+    FROM Book
+    WHERE id_publisher = NEW.id_publisher
+    AND _novelty = 'Yes'
+    AND YEAR(_date) = current_year
+    AND MONTH(`_date`) = current_month;
+    
+    IF new_books_count > 10 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'The publisher has reached the limit of 10 new books for the current month';
+    END IF;
+END$$
+DELIMITER ;
+
+INSERT INTO `book` (_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES (2023,'Yes', 'asd', 10.01, 1,  100, '70х100/16', '2023-01-01', 5000, 1, 1);
+
+#10. Видавництво BHV не випускає книги формату 60х88 / 16.
+DELIMITER $$
+DROP TRIGGER IF EXISTS trigger_10$$
+
+CREATE TRIGGER trigger_10
+BEFORE INSERT ON `book` FOR EACH ROW
+BEGIN
+	DECLARE name_publisher VARCHAR(50);
+	SELECT _name INTO name_publisher FROM `publisher` WHERE id_publisher = NEW.id_publisher;
+
+	IF name_publisher = 'Видавнича група BHV' AND `book`.`_format` = '60х88/16' THEN 
+    	SIGNAL SQLSTATE '45000' 
+        	SET MESSAGE_TEXT = 'BHV Publishing House does not issue books in the "60x88/16" format';
+	END IF;
+END$$
+DELIMITER ;
+
+INSERT INTO Book(_code, _novelty, _name, _price, id_publisher, _pages, _format, _date, _circulation, id_subject, id_category)
+VALUES
+(5110,'No', 'Апаратні засоби мультимедіа. Відеосистема РС', 15.51, 1,  400, '60х88/16', '2000-07-24', 5000, 1, 1);
